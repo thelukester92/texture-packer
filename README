@@ -1,0 +1,98 @@
+# Texture Packer
+
+A work-in-progress.
+
+Texture packer should do the following:
+
+* Given a folder full of images, find an efficient way to "pack" them into one or more textures
+	* Only one if it can fit inside a 2048x2048 image
+	* Otherwise, the minimum number of images up to 2048x2048 required
+	* padding between images to prevent bleeding when images are scaled (i.e. 2px)
+	* can take single images (i.e. background.png -> background)
+	* can take animations (i.e. walk.png -> walk-1, walk-2, walk-3, walk-4...)
+		* animation file names may have static frame sizes (i.e. all frames 64x64)
+		* if static frame size is given, use it for generating metadata to reconstruct the original untrimmed images
+* As images are packed, generate metadata in a selected format
+	* allowed formats...
+		* xml
+		* json
+		* lua
+	* metadata should include...
+		* x, y, width, and height of each frame in the generated texture
+		* x, y, width, and height of each frame in its original image (needed for trimming)
+		* rotated flag
+		* trimmed flag
+
+Trimming example:
+
+orig4x4     output
+@--------@  @--------@  frames = {
+| a   b  |  |a  b  dd|      a = { frame = { 0, 0, 2, 3 }, original = { 1, 0 } }
+| aa  bb |  |aa bb d |      b = { frame = { 3, 0, 2, 3 }, original = { 5, 0 } }
+|  a  b  |  | a b  d |      c = { frame = { 0, 4, 4, 1 }, original = { 0, 6 } }
+|        |  |        |      d = { frame = { 6, 0, 2, 3 }, original = { 5, 4 } }
+|     dd |  |cccc    |  }
+|     d  |  @--------@  originalFrameSize = { 4, 4 }
+|cccc d  |
+|        |
+@--------@
+
+By using frames[a].original and originalFrameSize, we can reconstruct this image for a:
+
+@----@
+| a  |
+| aa |
+|  a |
+|    |
+@----@
+
+Otherwise, if no original frame size was given, we would contruct this image:
+
+@--@
+|a |
+|aa|
+| a|
+@--@
+
+The latter is fine for single images, probably; in fact, we could use frames[a].original to add top-left padding which is sufficient:
+
+@---@
+| a |
+| aa|
+|  a|
+@---@
+
+For animated images, though, the animator assumes a consistent anchor, so originalFrameSize is required:
+
+orig4x1
+@----------------@
+|x    x    x    x|
+@----------------@
+
+should produce four frames:
+
+@----@ @----@ @----@ @----@
+|x   | | x  | |  x | |   x|
+@----@ @----@ @----@ @----@
+
+But if we didn't specify original frame size, we would get this instead:
+
+@-@ @-@ @-@ @-@
+|x| |x| |x| |x|
+@-@ @-@ @-@ @-@
+
+If the only difference is the position but the pixels are identical, we might pack it using just this:
+
+@-@
+|x|
+@-@
+
+But we would need this metadata to reconstruct the originally intended four frames:
+
+frames = {
+	1 = { frame = { 0, 0, 1, 1 }, original = { 0, 0 } }
+	2 = { frame = { 0, 0, 1, 1 }, original = { 4, 0 } }
+	3 = { frame = { 0, 0, 1, 1 }, original = { 8, 0 } }
+	4 = { frame = { 0, 0, 1, 1 }, original = { 12, 0 } }
+}
+originalFrameSize = { 4, 1 }
