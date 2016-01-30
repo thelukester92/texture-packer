@@ -16,12 +16,15 @@ Texture packer should do the following:
 	* allowed formats...
 		* xml
 		* json
-		* lua
+		* lua (for LÖVE)
 	* metadata should include...
 		* x, y, width, and height of each frame in the generated texture
 		* x, y, width, and height of each frame in its original image (needed for trimming)
 		* rotated flag
 		* trimmed flag
+* Perform all of this as part of the build process, automatically
+	* Cache result with timestamp and only update if needed
+	* Program should not include original images in the exported file, just the packed version
 
 Trimming example:
 
