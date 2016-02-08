@@ -1,26 +1,45 @@
 #include <iostream>
+#include <vector>
 #include "image.h"
 
 using namespace std;
 
 struct rect {
-	unsigned int x, y;
-	unsigned int w, h;
+	int x, y;
+	int w, h;
 
-	void translate(unsigned int dx, unsigned int dy) {
+	void translate(int dx, int dy) {
 		x += dx;
 		y += dy;
 	}
 };
 
+struct data {
+
+	data(image *img, rect min, rect orig) : img(img), min(min), orig(orig) {}
+
+	image *img;
+	rect min, orig;
+};
+
+struct node {
+
+	node(data *dat) : dat(dat) {}
+
+	data* dat;
+
+	node *down;
+	node *right;
+};
+
 rect find_min_rect(const image *img) {
-	unsigned int min_x = img->w, max_x = 0;
-	unsigned int min_y = img->h, max_y = 0;
+	int min_x = img->w, max_x = 0;
+	int min_y = img->h, max_y = 0;
 
-	unsigned int mask = 0xff000000;
+	int mask = 0xff000000;
 
-	for(unsigned int y = 0; y < img->h; y++) {
-		for(unsigned int x = 0; x < img->w; x++) {
+	for(int y = 0; y < img->h; y++) {
+		for(int x = 0; x < img->w; x++) {
 			if((mask & (img->pixels[x + y * img->w])) != 0) {
 				if(x > max_x)
 					max_x = x;
@@ -38,13 +57,23 @@ rect find_min_rect(const image *img) {
 }
 
 int main(int argc, char **argv) {
-	image *img;
-	img = load_png(argv[1]);
 
-	if(!img)
-		return 1;
+	vector<data*> metadata;
 
-	rect min = find_min_rect(img);
+	node *head;
 
-	cout << min.x << " " << min.y << " " << min.w << " " << min.h << endl;
+	for(int i = 1; i < argc; i++) {
+		
+		image *img = new image(argv[i]);
+		rect min = find_min_rect(img);
+		rect orig = {0, 0, img->w, img->h};
+
+		metadata.push_back(new data(img, min, orig));
+	}
+
+	
+	for(int i = 0; i < metadata.size(); i++) {
+		delete metadata[i]->img;
+		delete metadata[i];
+	}
 }
