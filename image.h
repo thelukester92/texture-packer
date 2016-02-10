@@ -5,18 +5,29 @@
 
 using namespace std;
 
+struct rect {
+	int x, y;
+	int w, h;
+
+	void translate(int dx, int dy) {
+		x += dx;
+		y += dy;
+	}
+};
+
 struct image {
 	int *pixels;
 	int w, h;
 
 	image(char *filename);
 	image(int w, int h);
+	void write(char *filename);
 
 	~image() {
 		delete [] pixels;
 	}
 
-	void set_section(const image *sub, int x, int y);
+	void set_section(const image *sub, int x, int y, rect min);
 };
 
 image::image(char *filename) {
@@ -82,13 +93,68 @@ image::image(int w, int h) {
 	}
 }
 
-void image::set_section(const image* sub, int x, int y) {
-	if(x + sub->w >= this->w || y + sub->h >= this->h || x < 0 || y <= 0)
-		throw "unable to draw image section";
+void image::write(char *filename) {
+	png_structp png_ptr;
+	png_infop info_ptr;
+	FILE *fp;
+	png_byte **row_pointers;
 
-	for(int yp = 0; yp < sub->h; yp++) {
-		for(int xp = 0; xp < sub->w; xp++) {
-			this->pixels[(xp + x) + (yp + y) * this->w] = pixels[xp + yp * sub->w];
+	if((fp = fopen(filename, "wb")) == NULL)
+		throw "unable to open file";
+
+	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+
+	if(!png_ptr) {
+		fclose(fp);
+		throw "filed to write to file";
+	}
+
+	info_ptr = png_create_info_struct(png_ptr);
+	if(!info_ptr) {
+		fclose(fp);
+		png_destroy_write_struct(&png_ptr, NULL);
+		throw "failed to create info struct";
+	}
+
+	if(setjmp(png_jmpbuf(png_ptr))) {
+		fclose(fp);
+		png_destroy_write_struct(&png_ptr, &info_ptr);
+		throw "unable to set error check";
+	}
+
+	png_set_IHDR(png_ptr, info_ptr, w, h, 8, PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+	
+	row_pointers = (png_byte**) png_malloc(png_ptr, h * sizeof(png_byte*));
+	for(int y = 0; y < h; y++) {
+		png_byte *row = (png_byte*) png_malloc(png_ptr, sizeof(int) * w);
+		row_pointers[y] = row;
+		for(int x = 0; x < w; x++) {
+			int pix = pixels[x + y * w];
+
+			*row++ = (pix >> 0 & 0xff);
+			*row++ = (pix >> 8 & 0xff);
+			*row++ = (pix >> 16 & 0xff);
+			*row++ = (pix >> 24 & 0xff);
+		}
+	}
+
+	png_init_io(png_ptr, fp);
+	png_set_rows(png_ptr, info_ptr, row_pointers);
+	png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
+
+	for(int y = 0; y < h; y++) {
+		png_free(png_ptr, row_pointers[y]);
+	}
+	png_free(png_ptr, row_pointers);
+
+	png_destroy_write_struct(&png_ptr, &info_ptr);
+	fclose(fp);
+}
+
+void image::set_section(const image* sub, int x, int y, rect min) {
+	for(int yp = 0; yp < min.h; yp++) {
+		for(int xp = 0; xp < min.w; xp++) {
+			this->pixels[(xp + x) + (yp + y) * this->w] = sub->pixels[(xp + min.x) + (yp + min.y) * sub->w];
 		}
 	}
 }

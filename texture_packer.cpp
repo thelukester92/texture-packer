@@ -1,18 +1,9 @@
 #include <iostream>
 #include <vector>
+#include <algorithm>
 #include "image.h"
 
 using namespace std;
-
-struct rect {
-	int x, y;
-	int w, h;
-
-	void translate(int dx, int dy) {
-		x += dx;
-		y += dy;
-	}
-};
 
 struct data {
 
@@ -21,6 +12,10 @@ struct data {
 	image *img;
 	rect min, orig;
 };
+
+bool compare(data *a, data *b) {
+	return a->min.w * a->min.h < b->min.w * b->min.h;
+}
 
 int s_id = 0;
 
@@ -118,11 +113,25 @@ rect find_min_rect(const image *img) {
 	return {min_x, min_y, max_x - min_x, max_y - min_y};
 }
 
+draw_tree(node* n, image* to) {
+	cout << "drawing " << n->id << endl;
+	if(n->dat && n->dat->img)
+		to->set_section(n->dat->img, n->r.x, n->r.y, n->dat->min);
+	if(n->child[0])
+		draw_tree(n->child[0], to);
+	if(n->child[1])
+		draw_tree(n->child[1], to);
+}
+
 int main(int argc, char **argv) {
 
-	vector<data*> metadata;
+	int out_w = 2048, out_h = 2048;
 
-	node *head = new node(10000, 10000);
+	vector<data*> metadata;
+	for(int x = 10; x < 50; x++) {
+
+	}
+	node *head = new node(out_w, out_h);
 
 	for(int i = 1; i < argc; i++) {
 		
@@ -132,11 +141,19 @@ int main(int argc, char **argv) {
 
 		data *d = new data(img, min, orig);
 		metadata.push_back(d);
+	}
 
-		if(!insert(head, d)) {
+	sort(metadata.begin(), metadata.end(), compare);
+
+	for(int i = 0; i < metadata.size(); i++) {
+		if(!insert(head, metadata[i])) {
 			cout << "failed to insert to tree" << endl;
 		}
 	}
+
+	image *out = new image(out_w, out_h);
+	draw_tree(head, out);
+	out->write("output.png");
 
 	for(int i = 0; i < metadata.size(); i++) {
 		delete metadata[i]->img;
