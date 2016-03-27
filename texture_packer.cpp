@@ -113,7 +113,7 @@ rect find_min_rect(const image *img) {
 	return {min_x, min_y, max_x - min_x, max_y - min_y};
 }
 
-draw_tree(node* n, image* to) {
+void draw_tree(node* n, image* to) {
 	cout << "drawing " << n->id << endl;
 	if(n->dat && n->dat->img)
 		to->set_section(n->dat->img, n->r.x, n->r.y, n->dat->min);
