@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <exception>
 #include "image.h"
 
 using namespace std;
@@ -123,19 +124,15 @@ void draw_tree(node* n, image* to) {
 		draw_tree(n->child[1], to);
 }
 
-int main(int argc, char **argv) {
-
+void doit(vector<string> imageFiles, string outputFile) {
 	int out_w = 2048, out_h = 2048;
 
 	vector<data*> metadata;
-	for(int x = 10; x < 50; x++) {
-
-	}
 	node *head = new node(out_w, out_h);
 
-	for(int i = 1; i < argc; i++) {
-		
-		image *img = new image(argv[i]);
+	for(int i = 0; i < imageFiles.size(); i++) {
+		cout << imageFiles[i] << endl;
+		image *img = new image(imageFiles[i].c_str());
 		rect min = find_min_rect(img);
 		rect orig = {0, 0, img->w, img->h};
 
@@ -153,11 +150,44 @@ int main(int argc, char **argv) {
 
 	image *out = new image(out_w, out_h);
 	draw_tree(head, out);
-	out->write("output.png");
+	out->write(outputFile.c_str());
 
 	for(int i = 0; i < metadata.size(); i++) {
 		delete metadata[i]->img;
 		delete metadata[i];
 	}
 	delete head;
+}
+
+int main(int argc, char **argv)
+{
+	vector<string> args;
+	string outputFile = "output.png";
+	for(int i = 1; i < argc; i++)
+	{
+		if(strcmp(argv[i], "-o") == 0 && i + 1 < argc)
+		{
+			outputFile = argv[i + 1];
+			i += 2;
+		}
+		else
+		{
+			args.push_back(argv[i]);
+		}
+	}
+	
+	try
+	{
+		doit(args, outputFile);
+	}
+	catch(exception &e)
+	{
+		cerr << e.what() << endl;
+	}
+	catch(const char *e)
+	{
+		cerr << e << endl;
+	}
+	
+	return 0;
 }

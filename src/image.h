@@ -19,9 +19,9 @@ struct image {
 	int *pixels;
 	int w, h;
 
-	image(char *filename);
+	image(const char *filename);
 	image(int w, int h);
-	void write(char *filename);
+	void write(const char *filename);
 
 	~image() {
 		delete [] pixels;
@@ -30,7 +30,7 @@ struct image {
 	void set_section(const image *sub, int x, int y, rect min);
 };
 
-image::image(char *filename) {
+image::image(const char *filename) {
 	png_structp png_ptr;
 	png_infop info_ptr;
 	unsigned int sig_read = 0;
@@ -93,7 +93,7 @@ image::image(int w, int h) {
 	}
 }
 
-void image::write(char *filename) {
+void image::write(const char *filename) {
 	png_structp png_ptr;
 	png_infop info_ptr;
 	FILE *fp;
